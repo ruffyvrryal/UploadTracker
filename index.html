@@ -123,19 +123,21 @@ async function initSupabase(){
       await saveToSupabase();
     }
     
-    // Set up real-time subscription
-    const subscription = db
-      .channel('tracker_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'tracker_data', filter: `device_id=eq.${device_id}` },
-        (payload) => {
-          if(payload.new){
-            state = payload.new.data_state;
-            render();
-          }
+    // Poll for changes every 2 seconds instead of realtime
+    setInterval(async function(){
+      try {
+        const { data: newData } = await db
+          .from('tracker_data')
+          .select('*')
+          .eq('device_id', device_id)
+          .single();
+        
+        if(newData && JSON.stringify(newData.data_state) !== JSON.stringify(state)){
+          state = newData.data_state;
+          render();
         }
-      )
-      .subscribe();
+      } catch(e) {}
+    }, 2000);
     
     render();
   } catch(e) {
