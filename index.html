@@ -78,9 +78,11 @@ function getDeviceId(){
 
 async function initSupabase(){
   var device_id = getDeviceId();
+  console.log("Init Supabase with device_id:", device_id);
   
   // Check if Supabase is configured
   var isConfigured = SUPABASE_URL !== "https://your-project.supabase.co" && SUPABASE_KEY !== "your-anon-key";
+  console.log("Supabase configured:", isConfigured);
   
   if(!isConfigured){
     // Use localStorage as fallback
@@ -98,11 +100,14 @@ async function initSupabase(){
   
   try {
     // Fetch existing data
+    console.log("Fetching data for device_id:", device_id);
     const { data, error } = await db
       .from('tracker_data')
       .select('*')
       .eq('device_id', device_id)
       .single();
+    
+    console.log("Fetch result - Data:", data, "Error:", error);
     
     if(error && error.code !== 'PGRST116'){
       console.error("Fetch error:", error);
@@ -133,10 +138,13 @@ async function initSupabase(){
           .single();
         
         if(newData && JSON.stringify(newData.data_state) !== JSON.stringify(state)){
+          console.log("Data changed, updating...", newData.data_state);
           state = newData.data_state;
           render();
         }
-      } catch(e) {}
+      } catch(e) {
+        console.error("Poll error:", e);
+      }
     }, 2000);
     
     render();
@@ -165,17 +173,23 @@ async function saveToSupabase(){
   }
   
   try {
-    const { error } = await db
+    console.log("Saving to Supabase:", {device_id, state});
+    
+    const { data, error } = await db
       .from('tracker_data')
       .upsert({ 
         device_id: device_id, 
         data_state: state,
         updated_at: new Date().toISOString()
-      });
+      }, { onConflict: 'device_id' });
     
-    if(error) console.error("Save error:", error);
+    if(error) {
+      console.error("Save error:", error);
+    } else {
+      console.log("Save success:", data);
+    }
   } catch(e) {
-    console.error("Save error:", e);
+    console.error("Save exception:", e);
   } finally {
     is_syncing = false;
   }
