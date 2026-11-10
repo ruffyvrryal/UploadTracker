@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Upload Tracker</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#16181d;--muted:#6b7280;--line:#e3e6eb;--red:#e5484d;--green:#30a46c;--accent:#3b6df0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#181b21;--text:#eceef2;--muted:#9097a3;--line:#272b33;--red:#ff6369;--green:#46c98a;--accent:#7b9bff}}
+:root[data-theme="dark"]{--bg:#0f1115;--card:#181b21;--text:#eceef2;--muted:#9097a3;--line:#272b33;--red:#ff6369;--green:#46c98a;--accent:#7b9bff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
+h1{margin:0;font-size:1.5rem}
+.date{color:var(--muted);font-size:.9rem;margin-top:2px}
+.sum{font-size:1.1rem;font-weight:600}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 18px;min-width:200px}
+.bar>i{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.tools input{flex:1;min-width:160px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font-size:.95rem}
+.tools button{padding:9px 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);cursor:pointer;font-size:.9rem}
+.tools button.p{background:var(--accent);border-color:var(--accent);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.card{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"led name x" "btn btn btn";align-items:center;gap:10px 12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;transition:border-color .2s}
+.card.on{border-color:var(--green)}
+.led{grid-area:led;width:18px;height:18px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red)}
+.on .led{background:var(--green);box-shadow:0 0 10px var(--green)}
+.name{grid-area:name;min-width:0;font-weight:600;font-size:1rem;line-height:1.25;overflow-wrap:break-word}
+.btn{grid-area:btn;width:100%;text-align:center;padding:9px 11px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer;font-size:.82rem}
+.on .btn{background:var(--green);border-color:var(--green);color:#fff}
+.x{grid-area:x;border:0;background:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:2px 4px}
+.hint{color:var(--muted);font-size:.8rem;margin-top:18px}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div><h1>Upload Tracker</h1><div class="date" id="date"></div></div>
+<div class="sum" id="sum"></div>
+</header>
+<div class="bar"><i id="fill"></i></div>
+<div class="tools">
+<input id="new" placeholder="Add another app…" maxlength="40">
+<button class="p" id="add">Add app</button>
+<button id="reset">Reset all to red</button>
+</div>
+<div class="grid" id="grid"></div>
+<p class="hint">Status resets automatically each new day. Your list and progress are saved in this browser.</p>
+</main>
+<script>
+var DEFAULT_APPS=["BoloUp","Camstar","Chamet ENG","Chamet ID","Crush","Emma","Gemgala","Gimme","Hala","Kaya","Kerja Aplikasi","Lee Management","Meto","Niki","Olamet","Poppo Agency","Poppo Agent","Poppo ID","Recho","Sela","SweetLover","Vone","World Agency","Creator"];
+var KEY="upload-tracker-v1";
+function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+var state={apps:DEFAULT_APPS.slice(),done:[],day:today()};
+try{var raw=localStorage.getItem(KEY);if(raw){var s=JSON.parse(raw);if(s&&Array.isArray(s.apps)){state=s}}}catch(e){}
+if(state.day!==today()){state.day=today();state.done=[]}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+function render(){
+ var g=document.getElementById("grid");g.innerHTML="";
+ state.apps.forEach(function(a){
+  var on=state.done.indexOf(a)>-1;
+  var c=document.createElement("div");c.className="card"+(on?" on":"");
+  var led=document.createElement("span");led.className="led";
+  var n=document.createElement("span");n.className="name";n.textContent=a;
+  var b=document.createElement("button");b.className="btn";b.textContent=on?"Uploaded ✓":"Mark uploaded";
+  b.onclick=function(){var i=state.done.indexOf(a);if(i>-1)state.done.splice(i,1);else state.done.push(a);save();render()};
+  var x=document.createElement("button");x.className="x";x.title="Remove app";x.textContent="×";
+  x.onclick=function(){if(confirm("Remove "+a+" from the list?")){state.apps=state.apps.filter(function(v){return v!==a});state.done=state.done.filter(function(v){return v!==a});save();render()}};
+  c.append(led,n,b,x);g.appendChild(c);
+ });
+ var d=state.done.filter(function(v){return state.apps.indexOf(v)>-1}).length,t=state.apps.length;
+ document.getElementById("sum").textContent=d+" / "+t+" uploaded";
+ document.getElementById("fill").style.width=(t?d/t*100:0)+"%";
+ document.getElementById("date").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+}
+document.getElementById("add").onclick=function(){
+ var i=document.getElementById("new"),v=i.value.trim();
+ if(v&&state.apps.indexOf(v)<0){state.apps.push(v);save();render()}
+ i.value="";
+};
+document.getElementById("new").onkeydown=function(e){if(e.key==="Enter")document.getElementById("add").click()};
+document.getElementById("reset").onclick=function(){state.done=[];save();render()};
+render();
+</script>
+</body>
+</html>
