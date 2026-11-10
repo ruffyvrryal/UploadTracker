@@ -54,7 +54,7 @@ h1{margin:0;font-size:1.5rem}
 // Supabase Configuration
 const SUPABASE_URL = "https://hemyybjwxekphqgzpusu.supabase.co";
 const SUPABASE_KEY = "sb_secret_LgTiqNn5yaKokHOWzS7Nag_i21x8DBr";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 var DEFAULT_APPS=["BoloUp","Camstar","Chamet ENG","Chamet ID","Crush","Emma","Gemgala","Gimme","Hala","Kaya","Kerja Aplikasi","Lee Management","Meto","Niki","Olamet","Poppo Agency","Poppo Agent","Poppo ID","Recho","Sela","SweetLover","Vone","World Agency","Creator"];
 
@@ -98,7 +98,7 @@ async function initSupabase(){
   
   try {
     // Fetch existing data
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('tracker_data')
       .select('*')
       .eq('device_id', device_id)
@@ -124,7 +124,7 @@ async function initSupabase(){
     }
     
     // Set up real-time subscription
-    const subscription = supabase
+    const subscription = db
       .channel('tracker_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'tracker_data', filter: `device_id=eq.${device_id}` },
@@ -163,7 +163,7 @@ async function saveToSupabase(){
   }
   
   try {
-    const { error } = await supabase
+    const { error } = await db
       .from('tracker_data')
       .upsert({ 
         device_id: device_id, 
