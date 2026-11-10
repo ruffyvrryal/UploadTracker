@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Upload Tracker</title>
+<title>📤 Upload Tracker</title>
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2?v=1"></script>
+<!-- Favicon -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%233b6df0' width='100' height='100'/><path fill='white' d='M50 30L50 70M30 50L70 50M40 60L50 40L60 60'/></svg>">
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--text:#16181d;--muted:#6b7280;--line:#e3e6eb;--red:#e5484d;--green:#30a46c;--accent:#3b6df0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#181b21;--text:#eceef2;--muted:#9097a3;--line:#272b33;--red:#ff6369;--green:#46c98a;--accent:#7b9bff}}
@@ -14,7 +16,7 @@
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:980px;margin:0 auto;padding:20px 16px 40px}
 header{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
-h1{margin:0;font-size:1.5rem}
+h1{margin:0;font-size:1.5rem;display:flex;align-items:center;gap:8px}
 .date{color:var(--muted);font-size:.9rem;margin-top:2px}
 .sum{font-size:1.1rem;font-weight:600}
 .bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:6px 0 18px;min-width:200px}
@@ -38,7 +40,7 @@ h1{margin:0;font-size:1.5rem}
 <body>
 <main>
 <header>
-<div><h1>Upload Tracker</h1><div class="date" id="date"></div></div>
+<div><h1>📤 Upload Tracker</h1><div class="date" id="date"></div></div>
 <div class="sum" id="sum"></div>
 </header>
 <div class="bar"><i id="fill"></i></div>
