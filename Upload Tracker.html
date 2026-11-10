@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Upload Tracker</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
 <style>
 :root{--bg:#f6f7f9;--card:#fff;--text:#16181d;--muted:#6b7280;--line:#e3e6eb;--red:#e5484d;--green:#30a46c;--accent:#3b6df0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1115;--card:#181b21;--text:#eceef2;--muted:#9097a3;--line:#272b33;--red:#ff6369;--green:#46c98a;--accent:#7b9bff}}
@@ -46,16 +49,80 @@ h1{margin:0;font-size:1.5rem}
 <button id="reset">Reset all to red</button>
 </div>
 <div class="grid" id="grid"></div>
-<p class="hint">Status resets automatically each new day. Your list and progress are saved in this browser.</p>
+<p class="hint">Status resets automatically each new day. Your data is synced in the cloud across all your devices.</p>
 </main>
 <script>
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDJXY0yMnZ2k8L9pQ3xR4sT5uV6wX7yZ8a",
+  authDomain: "upload-tracker-ruffy.firebaseapp.com",
+  databaseURL: "https://upload-tracker-ruffy-default-rtdb.firebaseio.com",
+  projectId: "upload-tracker-ruffy",
+  storageBucket: "upload-tracker-ruffy.appspot.com",
+  messagingSenderId: "123456789012",
+  appId: "1:123456789012:web:abcdef1234567890"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 var DEFAULT_APPS=["BoloUp","Camstar","Chamet ENG","Chamet ID","Crush","Emma","Gemgala","Gimme","Hala","Kaya","Kerja Aplikasi","Lee Management","Meto","Niki","Olamet","Poppo Agency","Poppo Agent","Poppo ID","Recho","Sela","SweetLover","Vone","World Agency","Creator"];
 var KEY="upload-tracker-v1";
-function today(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+
+function today(){
+  var d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+
 var state={apps:DEFAULT_APPS.slice(),done:[],day:today()};
-try{var raw=localStorage.getItem(KEY);if(raw){var s=JSON.parse(raw);if(s&&Array.isArray(s.apps)){state=s}}}catch(e){}
-if(state.day!==today()){state.day=today();state.done=[]}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+var db_ref = null;
+var is_syncing = false;
+
+// Generate unique device ID
+function getDeviceId(){
+  var id = localStorage.getItem("device-id");
+  if(!id){
+    id = "device-" + Math.random().toString(36).substr(2,9);
+    localStorage.setItem("device-id", id);
+  }
+  return id;
+}
+
+function initFirebase(){
+  var device_id = getDeviceId();
+  db_ref = db.ref("data/" + device_id);
+  
+  // Listen for changes from Firebase
+  db_ref.on("value", function(snapshot){
+    var data = snapshot.val();
+    if(data){
+      state = data;
+      if(state.day !== today()){
+        state.day = today();
+        state.done = [];
+        saveToFirebase();
+      }
+      render();
+    } else {
+      // First time - create initial data
+      state.day = today();
+      saveToFirebase();
+    }
+  });
+}
+
+function saveToFirebase(){
+  if(is_syncing) return;
+  is_syncing = true;
+  db_ref.set(state).then(function(){
+    is_syncing = false;
+  }).catch(function(e){
+    is_syncing = false;
+    console.error("Sync error:", e);
+  });
+}
+
 function render(){
  var g=document.getElementById("grid");g.innerHTML="";
  state.apps.forEach(function(a){
@@ -64,9 +131,9 @@ function render(){
   var led=document.createElement("span");led.className="led";
   var n=document.createElement("span");n.className="name";n.textContent=a;
   var b=document.createElement("button");b.className="btn";b.textContent=on?"Uploaded ✓":"Mark uploaded";
-  b.onclick=function(){var i=state.done.indexOf(a);if(i>-1)state.done.splice(i,1);else state.done.push(a);save();render()};
+  b.onclick=function(){var i=state.done.indexOf(a);if(i>-1)state.done.splice(i,1);else state.done.push(a);saveToFirebase();render()};
   var x=document.createElement("button");x.className="x";x.title="Remove app";x.textContent="×";
-  x.onclick=function(){if(confirm("Remove "+a+" from the list?")){state.apps=state.apps.filter(function(v){return v!==a});state.done=state.done.filter(function(v){return v!==a});save();render()}};
+  x.onclick=function(){if(confirm("Remove "+a+" from the list?")){state.apps=state.apps.filter(function(v){return v!==a});state.done=state.done.filter(function(v){return v!==a});saveToFirebase();render()}};
   c.append(led,n,b,x);g.appendChild(c);
  });
  var d=state.done.filter(function(v){return state.apps.indexOf(v)>-1}).length,t=state.apps.length;
@@ -74,14 +141,17 @@ function render(){
  document.getElementById("fill").style.width=(t?d/t*100:0)+"%";
  document.getElementById("date").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"});
 }
+
 document.getElementById("add").onclick=function(){
  var i=document.getElementById("new"),v=i.value.trim();
- if(v&&state.apps.indexOf(v)<0){state.apps.push(v);save();render()}
+ if(v&&state.apps.indexOf(v)<0){state.apps.push(v);saveToFirebase();render()}
  i.value="";
 };
 document.getElementById("new").onkeydown=function(e){if(e.key==="Enter")document.getElementById("add").click()};
-document.getElementById("reset").onclick=function(){state.done=[];save();render()};
-render();
+document.getElementById("reset").onclick=function(){state.done=[];saveToFirebase();render()};
+
+// Initialize when page loads
+initFirebase();
 </script>
 </body>
 </html>
