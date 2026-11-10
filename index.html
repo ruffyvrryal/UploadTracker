@@ -52,8 +52,8 @@ h1{margin:0;font-size:1.5rem}
 </main>
 <script>
 // Supabase Configuration
-const SUPABASE_URL = "https://your-project.supabase.co";
-const SUPABASE_KEY = "your-anon-key";
+const SUPABASE_URL = "https://hemyybjwxekphqgzpusu.supabase.co";
+const SUPABASE_KEY = "sb_secret_LgTiqNn5yaKokHOWzS7Nag_i21x8DBr";
 const { createClient } = window.supabase;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -79,6 +79,23 @@ function getDeviceId(){
 
 async function initSupabase(){
   var device_id = getDeviceId();
+  
+  // Check if Supabase is configured
+  var isConfigured = SUPABASE_URL !== "https://your-project.supabase.co" && SUPABASE_KEY !== "your-anon-key";
+  
+  if(!isConfigured){
+    // Use localStorage as fallback
+    try{
+      var raw=localStorage.getItem("upload-tracker-v1");
+      if(raw){
+        var s=JSON.parse(raw);
+        if(s&&Array.isArray(s.apps)){state=s}
+      }
+    }catch(e){}
+    if(state.day!==today()){state.day=today();state.done=[]}
+    render();
+    return;
+  }
   
   try {
     // Fetch existing data
@@ -132,6 +149,19 @@ async function saveToSupabase(){
   if(is_syncing) return;
   is_syncing = true;
   var device_id = getDeviceId();
+  
+  // Always save to localStorage as backup
+  try{
+    localStorage.setItem("upload-tracker-v1",JSON.stringify(state));
+  }catch(e){}
+  
+  // Check if Supabase is configured
+  var isConfigured = SUPABASE_URL !== "https://your-project.supabase.co" && SUPABASE_KEY !== "your-anon-key";
+  
+  if(!isConfigured){
+    is_syncing = false;
+    return;
+  }
   
   try {
     const { error } = await supabase
