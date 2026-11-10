@@ -76,9 +76,11 @@ function getDeviceId(){
   return id;
 }
 
+// Use a shared device_id for all devices
+var SHARED_DEVICE_ID = "shared-tracker";
+
 async function initSupabase(){
-  var device_id = getDeviceId();
-  console.log("Init Supabase with device_id:", device_id);
+  console.log("Init Supabase with shared device_id");
   
   // Check if Supabase is configured
   var isConfigured = SUPABASE_URL !== "https://your-project.supabase.co" && SUPABASE_KEY !== "your-anon-key";
@@ -100,11 +102,11 @@ async function initSupabase(){
   
   try {
     // Fetch existing data
-    console.log("Fetching data for device_id:", device_id);
+    console.log("Fetching data for shared device");
     const { data, error } = await db
       .from('tracker_data')
       .select('*')
-      .eq('device_id', device_id)
+      .eq('device_id', SHARED_DEVICE_ID)
       .single();
     
     console.log("Fetch result - Data:", data, "Error:", error);
@@ -128,13 +130,13 @@ async function initSupabase(){
       await saveToSupabase();
     }
     
-    // Poll for changes every 2 seconds instead of realtime
+    // Poll for changes every 2 seconds
     setInterval(async function(){
       try {
         const { data: newData } = await db
           .from('tracker_data')
           .select('*')
-          .eq('device_id', device_id)
+          .eq('device_id', SHARED_DEVICE_ID)
           .single();
         
         if(newData && JSON.stringify(newData.data_state) !== JSON.stringify(state)){
@@ -157,7 +159,6 @@ async function initSupabase(){
 async function saveToSupabase(){
   if(is_syncing) return;
   is_syncing = true;
-  var device_id = getDeviceId();
   
   // Always save to localStorage as backup
   try{
@@ -173,12 +174,12 @@ async function saveToSupabase(){
   }
   
   try {
-    console.log("Saving to Supabase:", {device_id, state});
+    console.log("Saving to Supabase with shared device_id:", {state});
     
     const { data, error } = await db
       .from('tracker_data')
       .upsert({ 
-        device_id: device_id, 
+        device_id: SHARED_DEVICE_ID, 
         data_state: state,
         updated_at: new Date().toISOString()
       }, { onConflict: 'device_id' });
